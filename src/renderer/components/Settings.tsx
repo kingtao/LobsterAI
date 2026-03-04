@@ -31,6 +31,7 @@ import {
   MoonshotIcon,
   ZhipuIcon,
   MiniMaxIcon,
+  YouDaoZhiYunIcon,
   QwenIcon,
   XiaomiIcon,
   VolcengineIcon,
@@ -58,6 +59,7 @@ const providerKeys = [
   'moonshot',
   'zhipu',
   'minimax',
+  'youdaozhiyun',
   'qwen',
   'xiaomi',
   'volcengine',
@@ -127,6 +129,7 @@ const providerMeta: Record<ProviderType, { label: string; icon: React.ReactNode 
   moonshot: { label: 'Moonshot', icon: <MoonshotIcon /> },
   zhipu: { label: 'Zhipu', icon: <ZhipuIcon /> },
   minimax: { label: 'MiniMax', icon: <MiniMaxIcon /> },
+  youdaozhiyun: { label: '有道智云', icon: <YouDaoZhiYunIcon /> },
   qwen: { label: 'Qwen', icon: <QwenIcon /> },
   xiaomi: { label: 'Xiaomi', icon: <XiaomiIcon /> },
   volcengine: { label: 'Volcengine', icon: <VolcengineIcon /> },
@@ -223,6 +226,9 @@ const copyTextToClipboard = async (text: string): Promise<boolean> => {
 
 const getFixedApiFormatForProvider = (provider: string): 'anthropic' | 'openai' | null => {
   if (provider === 'openai' || provider === 'gemini') {
+    return 'openai';
+  }
+  if (provider === 'youdaozhiyun') {
     return 'openai';
   }
   if (provider === 'anthropic') {
@@ -594,6 +600,17 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice }) => {
             ...prev,
             minimax: {
               ...prev.minimax,
+              enabled: true,
+              apiKey: config.api.key,
+              baseUrl: config.api.baseUrl
+            }
+          }));
+        } else if (normalizedApiBaseUrl.includes('openapi.youdao.com')) {
+          setActiveProvider('youdaozhiyun');
+          setProviders(prev => ({
+            ...prev,
+            youdaozhiyun: {
+              ...prev.youdaozhiyun,
               enabled: true,
               apiKey: config.api.key,
               baseUrl: config.api.baseUrl
