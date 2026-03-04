@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { CoworkConfig, CoworkExecutionMode } from '../coworkStore';
-import { resolveCurrentApiConfig } from './claudeSettings';
+import { resolveRawApiConfig } from './claudeSettings';
 import type { OpenClawEngineManager } from './openclawEngineManager';
 
 const mapExecutionModeToSandboxMode = (mode: CoworkExecutionMode): 'off' | 'non-main' | 'all' => {
@@ -10,8 +10,8 @@ const mapExecutionModeToSandboxMode = (mode: CoworkExecutionMode): 'off' | 'non-
   return 'non-main';
 };
 
-const mapApiTypeToOpenClawApi = (apiType: 'anthropic' | 'openai' | undefined): 'anthropic-messages' | 'openai-responses' => {
-  return apiType === 'openai' ? 'openai-responses' : 'anthropic-messages';
+const mapApiTypeToOpenClawApi = (apiType: 'anthropic' | 'openai' | undefined): 'anthropic-messages' | 'openai-completions' => {
+  return apiType === 'openai' ? 'openai-completions' : 'anthropic-messages';
 };
 
 const ensureDir = (dirPath: string): void => {
@@ -49,7 +49,7 @@ export class OpenClawConfigSync {
   sync(reason: string): OpenClawConfigSyncResult {
     const configPath = this.engineManager.getConfigPath();
     const coworkConfig = this.getCoworkConfig();
-    const apiResolution = resolveCurrentApiConfig('local');
+    const apiResolution = resolveRawApiConfig();
 
     if (!apiResolution.config) {
       return {

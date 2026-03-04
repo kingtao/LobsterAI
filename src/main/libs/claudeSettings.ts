@@ -312,6 +312,37 @@ export function getCurrentApiConfig(target: OpenAICompatProxyTarget = 'local'): 
   return resolveCurrentApiConfig(target).config;
 }
 
+/**
+ * Resolve the raw API config directly from the app config,
+ * without requiring the OpenAI compatibility proxy.
+ * Used by OpenClaw config sync which has its own model routing.
+ */
+export function resolveRawApiConfig(): ApiConfigResolution {
+  const sqliteStore = getStore();
+  if (!sqliteStore) {
+    return { config: null, error: 'Store is not initialized.' };
+  }
+  const appConfig = sqliteStore.get<AppConfig>('app_config');
+  if (!appConfig) {
+    return { config: null, error: 'Application config not found.' };
+  }
+  const { matched, error } = resolveMatchedProvider(appConfig);
+  if (!matched) {
+    return { config: null, error };
+  }
+  const apiKey = matched.providerConfig.apiKey?.trim() || '';
+  return {
+    config: {
+      apiKey: matched.providerName === 'ollama' && matched.apiFormat === 'anthropic' && !apiKey
+        ? 'sk-ollama-local'
+        : apiKey,
+      baseURL: matched.baseURL,
+      model: matched.modelId,
+      apiType: matched.apiFormat === 'anthropic' ? 'anthropic' : 'openai',
+    },
+  };
+}
+
 export function buildEnvForConfig(config: CoworkApiConfig): Record<string, string> {
   const baseEnv = { ...process.env } as Record<string, string>;
 

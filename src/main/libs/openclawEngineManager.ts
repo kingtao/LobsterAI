@@ -342,6 +342,7 @@ export class OpenClawEngineManager extends EventEmitter {
       OPENCLAW_ENGINE_VERSION: runtime.version || DEFAULT_OPENCLAW_VERSION,
     };
 
+    console.log(`[OpenClaw] forking gateway: entry=${openclawEntry}, cwd=${runtime.root}, port=${port}`);
     const child = utilityProcess.fork(
       openclawEntry,
       ['gateway', '--bind', 'loopback', '--port', String(port), '--token', token],
@@ -353,6 +354,7 @@ export class OpenClawEngineManager extends EventEmitter {
       },
     );
 
+    console.log(`[OpenClaw] fork returned, pid=${child.pid}`);
     this.gatewayProcess = child;
     this.attachGatewayProcessLogs(child);
     this.attachGatewayExitHandlers(child);
@@ -455,17 +457,17 @@ export class OpenClawEngineManager extends EventEmitter {
 
   private resolveOpenClawEntry(runtimeRoot: string): string | null {
     return findPath([
-      path.join(runtimeRoot, 'gateway.asar', 'openclaw.mjs'),
       path.join(runtimeRoot, 'openclaw.mjs'),
       path.join(runtimeRoot, 'dist', 'entry.js'),
       path.join(runtimeRoot, 'dist', 'entry.mjs'),
+      path.join(runtimeRoot, 'gateway.asar', 'openclaw.mjs'),
     ]);
   }
 
   private resolveGatewayClientEntry(runtimeRoot: string): string | null {
     const distRoots = [
-      path.join(runtimeRoot, 'gateway.asar', 'dist'),
       path.join(runtimeRoot, 'dist'),
+      path.join(runtimeRoot, 'gateway.asar', 'dist'),
     ];
 
     for (const distRoot of distRoots) {
@@ -535,7 +537,19 @@ export class OpenClawEngineManager extends EventEmitter {
   private ensureConfigFile(): void {
     ensureDir(path.dirname(this.configPath));
     if (!fs.existsSync(this.configPath)) {
-      fs.writeFileSync(this.configPath, '{}\n', 'utf8');
+      fs.writeFileSync(this.configPath, JSON.stringify({ gateway: { mode: 'local' } }, null, 2) + '\n', 'utf8');
+      return;
+    }
+    // Ensure gateway.mode is set even if config already exists
+    try {
+      const raw = fs.readFileSync(this.configPath, 'utf8');
+      const config = JSON.parse(raw);
+      if (!config.gateway?.mode) {
+        config.gateway = { ...config.gateway, mode: 'local' };
+        fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2) + '\n', 'utf8');
+      }
+    } catch {
+      // ignore parse errors
     }
   }
 
@@ -665,12 +679,19 @@ export class OpenClawEngineManager extends EventEmitter {
       });
     };
 
-    child.stdout?.on('data', (chunk) => appendLog(chunk, 'stdout'));
-    child.stderr?.on('data', (chunk) => appendLog(chunk, 'stderr'));
+    child.stdout?.on('data', (chunk) => {
+      appendLog(chunk, 'stdout');
+      console.log(`[OpenClaw stdout] ${typeof chunk === 'string' ? chunk : chunk.toString()}`);
+    });
+    child.stderr?.on('data', (chunk) => {
+      appendLog(chunk, 'stderr');
+      console.error(`[OpenClaw stderr] ${typeof chunk === 'string' ? chunk : chunk.toString()}`);
+    });
   }
 
   private attachGatewayExitHandlers(child: UtilityProcess): void {
     child.once('error', (type, location) => {
+      console.error(`[OpenClaw] gateway process error event: type=${type}, location=${location}`);
       if (this.expectedGatewayExits.has(child)) {
         this.expectedGatewayExits.delete(child);
         return;
@@ -686,6 +707,7 @@ export class OpenClawEngineManager extends EventEmitter {
     });
 
     child.once('exit', (code) => {
+      console.log(`[OpenClaw] gateway process exited with code=${code}`);
       if (this.gatewayProcess === child) {
         this.gatewayProcess = null;
       }

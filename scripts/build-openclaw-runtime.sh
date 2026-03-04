@@ -174,7 +174,7 @@ const copyEntry = (name) => {
 };
 
 const listAsarEntries = () => {
-  const entries = new Set(asar.listPackage(gatewayAsarPath));
+  const entries = new Set(asar.listPackage(gatewayAsarPath).map(e => e.replace(/\\/g, '/')));
   const hasOpenClawEntry = entries.has('/openclaw.mjs');
   const hasControlUiIndex = entries.has('/dist/control-ui/index.html');
   const hasGatewayEntry = entries.has('/dist/entry.js') || entries.has('/dist/entry.mjs');
