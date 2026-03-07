@@ -448,7 +448,7 @@ const IMSettings: React.FC = () => {
       </div>
 
       {/* Platform Settings - Right Side */}
-      <div className="flex-1 min-w-0 space-y-4 overflow-y-auto">
+      <div className="flex-1 min-w-0 pl-4 pr-2 space-y-4 overflow-y-auto [scrollbar-gutter:stable]">
         {/* Header with status */}
         <div className="flex items-center gap-3 pb-3 border-b dark:border-claude-darkBorder/60 border-claude-border/60">
           <div className="flex items-center gap-2">
