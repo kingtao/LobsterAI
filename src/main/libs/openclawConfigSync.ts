@@ -204,13 +204,19 @@ export class OpenClawConfigSync {
           }),
     };
 
-    // Sync MCP Bridge config
+    // Sync MCP Bridge config into the plugin's own config section
+    // (root-level keys are rejected by OpenClaw's strict schema validation)
     const mcpBridgeCfg = this.getMcpBridgeConfig?.();
     if (mcpBridgeCfg && mcpBridgeCfg.tools.length > 0) {
-      managedConfig.mcpBridge = {
-        callbackUrl: mcpBridgeCfg.callbackUrl,
-        secret: mcpBridgeCfg.secret,
-        tools: mcpBridgeCfg.tools,
+      const plugins = managedConfig.plugins as Record<string, unknown>;
+      const entries = plugins.entries as Record<string, Record<string, unknown>>;
+      entries['mcp-bridge'] = {
+        ...entries['mcp-bridge'],
+        config: {
+          callbackUrl: mcpBridgeCfg.callbackUrl,
+          secret: mcpBridgeCfg.secret,
+          tools: mcpBridgeCfg.tools,
+        },
       };
     }
 
