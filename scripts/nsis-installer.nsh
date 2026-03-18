@@ -42,7 +42,8 @@
   Pop $1
 
   StrCmp $0 "0" TarExtractOK
-    MessageBox MB_OK|MB_ICONEXCLAMATION "Resource extraction returned exit code $0. The application may not work correctly."
+    FileWrite $2 "tar-extract-error: exit=$0 output=$1$\r$\n"
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Resource extraction failed (exit code $0):$\r$\n$\r$\n$1"
   TarExtractOK:
 
   ${GetTime} "" "L" $3 $4 $5 $6 $7 $8 $9
