@@ -357,8 +357,18 @@ export class OpenClawEngineManager extends EventEmitter {
 
     this.ensureBareEntryFiles(runtime.root);
     console.log(`[OpenClaw] startGateway: ensureBareEntryFiles done (${elapsed()})`);
-    this.applyRuntimeHotfixes(runtime.root);
-    console.log(`[OpenClaw] startGateway: applyRuntimeHotfixes done (${elapsed()})`);
+    // Skip hotfixes when gateway-bundle.mjs exists. The hotfixes patch individual
+    // JS files in dist/, but the bundle is a single esbuild artifact that doesn't
+    // use those files. Applying hotfixes with bundle present is wasteful (Electron's
+    // transparent asar read causes walkJsFiles to scan ~1100 files inside gateway.asar)
+    // and can take 250+ seconds on Windows due to Defender scanning.
+    const bundlePath = path.join(runtime.root, 'gateway-bundle.mjs');
+    if (fs.existsSync(bundlePath)) {
+      console.log(`[OpenClaw] startGateway: skipping applyRuntimeHotfixes (bundle exists) (${elapsed()})`);
+    } else {
+      this.applyRuntimeHotfixes(runtime.root);
+      console.log(`[OpenClaw] startGateway: applyRuntimeHotfixes done (${elapsed()})`);
+    }
 
     const openclawEntry = this.resolveOpenClawEntry(runtime.root);
     console.log(`[OpenClaw] startGateway: resolveOpenClawEntry done (${elapsed()}), entry=${openclawEntry}`);
