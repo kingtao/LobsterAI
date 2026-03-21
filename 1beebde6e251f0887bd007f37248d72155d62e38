@@ -1,0 +1,27 @@
+src/renderer/components/Settings.tsx
+  b53122ed5c09fd8a 203-237,437-441,445,988-1157,2548-2561,2563-2758,2796,2889,2892,3044,3056,3075,3080-3086,3088
+src/renderer/config.ts
+  b53122ed5c09fd8a 74-79,206-208,322
+src/renderer/services/i18n.ts
+  b53122ed5c09fd8a 103-119,1083-1099
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.15",
+  "base_commit_sha": "1beebde6e251f0887bd007f37248d72155d62e38",
+  "prompts": {
+    "b53122ed5c09fd8a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7903fe40-fc6b-47b3-9a4f-0e3584a998bd",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "金涛 <jintao02@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1210,
+      "total_deletions": 710,
+      "accepted_lines": 548,
+      "overriden_lines": 1
+    }
+  }
+}
