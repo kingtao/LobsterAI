@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "53cc46831dc75d72b65caa8e49db1922bd5d2261",
+  "prompts": {
+    "91df4b8f22a813f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "021c5023-9c27-426b-97ba-7a825943fd53",
+        "model": "MiniMax-M2.7"
+      },
+      "human_author": "金涛 <jintao02@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 6,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
