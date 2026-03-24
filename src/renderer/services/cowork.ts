@@ -6,6 +6,8 @@ import {
   updateSessionStatus,
   deleteSession as deleteSessionAction,
   deleteSessions as deleteSessionsAction,
+  deleteMessage as deleteMessageAction,
+  deleteMessages as deleteMessagesAction,
   addMessage,
   updateMessageContent,
   setStreaming,
@@ -360,6 +362,34 @@ class CoworkService {
     }
 
     console.error('Failed to batch delete sessions:', result.error);
+    return false;
+  }
+
+  async deleteMessage(sessionId: string, messageId: string): Promise<boolean> {
+    const cowork = window.electron?.cowork;
+    if (!cowork) return false;
+
+    const result = await cowork.deleteMessage(sessionId, messageId);
+    if (result.success) {
+      store.dispatch(deleteMessageAction({ sessionId, messageId }));
+      return true;
+    }
+
+    console.error('Failed to delete message:', result.error);
+    return false;
+  }
+
+  async deleteMessages(sessionId: string, messageIds: string[]): Promise<boolean> {
+    const cowork = window.electron?.cowork;
+    if (!cowork) return false;
+
+    const result = await cowork.deleteMessages(sessionId, messageIds);
+    if (result.success) {
+      store.dispatch(deleteMessagesAction({ sessionId, messageIds }));
+      return true;
+    }
+
+    console.error('Failed to batch delete messages:', result.error);
     return false;
   }
 

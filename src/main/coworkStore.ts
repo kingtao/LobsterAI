@@ -869,6 +869,21 @@ export class CoworkStore {
     this.saveDb();
   }
 
+  deleteMessage(sessionId: string, messageId: string): void {
+    this.db.run('DELETE FROM cowork_messages WHERE id = ? AND session_id = ?', [messageId, sessionId]);
+    this.saveDb();
+  }
+
+  deleteMessages(sessionId: string, messageIds: string[]): void {
+    if (messageIds.length === 0) return;
+    const placeholders = messageIds.map(() => '?').join(',');
+    this.db.run(
+      `DELETE FROM cowork_messages WHERE id IN (${placeholders}) AND session_id = ?`,
+      [...messageIds, sessionId]
+    );
+    this.saveDb();
+  }
+
   // Config operations
   getConfig(): CoworkConfig {
     interface ConfigRow {

@@ -208,6 +208,21 @@ const coworkSlice = createSlice({
       }
     },
 
+    deleteMessage(state, action: PayloadAction<{ sessionId: string; messageId: string }>) {
+      const { sessionId, messageId } = action.payload;
+      if (state.currentSession?.id === sessionId && state.currentSession.messages) {
+        state.currentSession.messages = state.currentSession.messages.filter(m => m.id !== messageId);
+      }
+    },
+
+    deleteMessages(state, action: PayloadAction<{ sessionId: string; messageIds: string[] }>) {
+      const { sessionId, messageIds } = action.payload;
+      const idsToDelete = new Set(messageIds);
+      if (state.currentSession?.id === sessionId && state.currentSession.messages) {
+        state.currentSession.messages = state.currentSession.messages.filter(m => !idsToDelete.has(m.id));
+      }
+    },
+
     addMessage(state, action: PayloadAction<{ sessionId: string; message: CoworkMessage }>) {
       const { sessionId, message } = action.payload;
 
@@ -328,6 +343,8 @@ export const {
   updateSessionStatus,
   deleteSession,
   deleteSessions,
+  deleteMessage,
+  deleteMessages,
   addMessage,
   updateMessageContent,
   setStreaming,

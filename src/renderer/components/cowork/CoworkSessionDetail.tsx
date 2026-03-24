@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { FolderIcon } from '@heroicons/react/24/solid';
 import { coworkService } from '../../services/cowork';
+import { expandMessageIdsForDeletion } from '../../utils/coworkDeleteUtils';
 import SidebarToggleIcon from '../icons/SidebarToggleIcon';
 import ComposeIcon from '../icons/ComposeIcon';
 import PuzzleIcon from '../icons/PuzzleIcon';
@@ -648,11 +649,10 @@ const TodoWriteInputView: React.FC<{ items: ParsedTodoItem[] }> = ({ items }) =>
             {item.status === 'completed' && <CheckIcon className="h-3 w-3 stroke-[2.5]" />}
           </span>
           <div className="min-w-0 flex-1">
-            <div className={`text-xs whitespace-pre-wrap break-words leading-5 ${
-              item.status === 'completed'
-                ? 'dark:text-claude-darkTextSecondary/70 text-claude-textSecondary/80'
-                : 'dark:text-claude-darkText text-claude-text'
-            }`}>
+            <div className={`text-xs whitespace-pre-wrap break-words leading-5 ${item.status === 'completed'
+              ? 'dark:text-claude-darkTextSecondary/70 text-claude-textSecondary/80'
+              : 'dark:text-claude-darkText text-claude-text'
+              }`}>
               {item.primaryText}
             </div>
           </div>
@@ -671,162 +671,158 @@ const ToolCallGroup: React.FC<{
   isLastInSequence = true,
   mapDisplayText,
 }) => {
-  const { toolUse, toolResult } = group;
-  const rawToolName = typeof toolUse.metadata?.toolName === 'string' ? toolUse.metadata.toolName : 'Tool';
-  const toolName = getToolDisplayName(rawToolName);
-  const toolInput = toolUse.metadata?.toolInput;
-  const isCronTool = isCronToolName(rawToolName);
-  const isTodoWriteTool = isTodoWriteToolName(rawToolName);
-  const todoItems = isTodoWriteTool ? parseTodoWriteItems(toolInput) : null;
-  const mapText = mapDisplayText ?? ((value: string) => value);
-  const toolInputDisplayRaw = formatToolInput(rawToolName, toolInput);
-  const toolInputDisplay = toolInputDisplayRaw ? mapText(toolInputDisplayRaw) : null;
-  const toolInputSummaryRaw = getToolInputSummary(rawToolName, toolInput) ?? toolInputDisplayRaw;
-  const toolInputSummary = toolInputSummaryRaw ? mapText(toolInputSummaryRaw) : null;
-  const toolResultDisplayRaw = toolResult ? getToolResultDisplay(toolResult) : '';
-  const toolResultDisplay = mapText(toolResultDisplayRaw);
-  const hasToolResultText = hasText(toolResultDisplay);
-  const isToolError = Boolean(toolResult?.metadata?.isError || toolResult?.metadata?.error);
-  const showNoDetailError = isToolError && !hasToolResultText;
-  const toolResultFallback = showNoDetailError ? i18nService.t('coworkToolNoErrorDetail') : '';
-  const displayToolResult = hasToolResultText ? toolResultDisplay : toolResultFallback;
-  const [isExpanded, setIsExpanded] = useState(false);
-  const resultLineCount = hasToolResultText ? getToolResultLineCount(toolResultDisplay) : 0;
-  const toolResultSummary = isCronTool && hasToolResultText
-    ? truncatePreview(toolResultDisplay.replace(/\s+/g, ' '))
-    : null;
+    const { toolUse, toolResult } = group;
+    const rawToolName = typeof toolUse.metadata?.toolName === 'string' ? toolUse.metadata.toolName : 'Tool';
+    const toolName = getToolDisplayName(rawToolName);
+    const toolInput = toolUse.metadata?.toolInput;
+    const isCronTool = isCronToolName(rawToolName);
+    const isTodoWriteTool = isTodoWriteToolName(rawToolName);
+    const todoItems = isTodoWriteTool ? parseTodoWriteItems(toolInput) : null;
+    const mapText = mapDisplayText ?? ((value: string) => value);
+    const toolInputDisplayRaw = formatToolInput(rawToolName, toolInput);
+    const toolInputDisplay = toolInputDisplayRaw ? mapText(toolInputDisplayRaw) : null;
+    const toolInputSummaryRaw = getToolInputSummary(rawToolName, toolInput) ?? toolInputDisplayRaw;
+    const toolInputSummary = toolInputSummaryRaw ? mapText(toolInputSummaryRaw) : null;
+    const toolResultDisplayRaw = toolResult ? getToolResultDisplay(toolResult) : '';
+    const toolResultDisplay = mapText(toolResultDisplayRaw);
+    const hasToolResultText = hasText(toolResultDisplay);
+    const isToolError = Boolean(toolResult?.metadata?.isError || toolResult?.metadata?.error);
+    const showNoDetailError = isToolError && !hasToolResultText;
+    const toolResultFallback = showNoDetailError ? i18nService.t('coworkToolNoErrorDetail') : '';
+    const displayToolResult = hasToolResultText ? toolResultDisplay : toolResultFallback;
+    const [isExpanded, setIsExpanded] = useState(false);
+    const resultLineCount = hasToolResultText ? getToolResultLineCount(toolResultDisplay) : 0;
+    const toolResultSummary = isCronTool && hasToolResultText
+      ? truncatePreview(toolResultDisplay.replace(/\s+/g, ' '))
+      : null;
 
-  // Check if this is a Bash-like tool that should show terminal style
-  const isBashTool = isBashLikeToolName(rawToolName);
+    // Check if this is a Bash-like tool that should show terminal style
+    const isBashTool = isBashLikeToolName(rawToolName);
 
-  return (
-    <div className="relative py-1">
-      {/* Vertical connecting line to next tool group */}
-      {!isLastInSequence && (
-        <div className="absolute left-[3.5px] top-[14px] bottom-[-8px] w-px dark:bg-claude-darkTextSecondary/30 bg-claude-textSecondary/30" />
-      )}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-start gap-2 text-left group relative z-10"
-      >
-        <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${
-          !toolResult
+    return (
+      <div className="relative py-1">
+        {/* Vertical connecting line to next tool group */}
+        {!isLastInSequence && (
+          <div className="absolute left-[3.5px] top-[14px] bottom-[-8px] w-px dark:bg-claude-darkTextSecondary/30 bg-claude-textSecondary/30" />
+        )}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full flex items-start gap-2 text-left group relative z-10"
+        >
+          <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${!toolResult
             ? 'bg-blue-500 animate-pulse'
             : isToolError
               ? 'bg-red-500'
               : 'bg-green-500'
-        }`} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium dark:text-claude-darkTextSecondary text-claude-textSecondary">
-              {toolName}
-            </span>
-            {toolInputSummary && (
-              <code className="text-xs dark:text-claude-darkTextSecondary/80 text-claude-textSecondary/80 font-mono truncate max-w-[400px]">
-                {toolInputSummary}
-              </code>
-            )}
-          </div>
-          {toolResult && !isTodoWriteTool && (hasToolResultText || showNoDetailError) && (
-            <div className={`text-xs mt-0.5 ${
-              hasToolResultText
+            }`} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium dark:text-claude-darkTextSecondary text-claude-textSecondary">
+                {toolName}
+              </span>
+              {toolInputSummary && (
+                <code className="text-xs dark:text-claude-darkTextSecondary/80 text-claude-textSecondary/80 font-mono truncate max-w-[400px]">
+                  {toolInputSummary}
+                </code>
+              )}
+            </div>
+            {toolResult && !isTodoWriteTool && (hasToolResultText || showNoDetailError) && (
+              <div className={`text-xs mt-0.5 ${hasToolResultText
                 ? 'dark:text-claude-darkTextSecondary/60 text-claude-textSecondary/60'
                 : showNoDetailError
                   ? 'text-red-500/80'
                   : 'dark:text-claude-darkTextSecondary/60 text-claude-textSecondary/60'
-            }`}>
-              {hasToolResultText
-                ? (toolResultSummary ?? `${resultLineCount} ${resultLineCount === 1 ? 'line' : 'lines'} of output`)
-                : toolResultFallback}
-            </div>
-          )}
-          {!toolResult && (
-            <div className="text-xs dark:text-claude-darkTextSecondary/60 text-claude-textSecondary/60 mt-0.5">
-              {i18nService.t('coworkToolRunning')}
-            </div>
-          )}
-        </div>
-      </button>
-      {isExpanded && (
-        <div className="ml-4 mt-2">
-          {isBashTool ? (
-            // Terminal-style display for Bash commands
-            <div className="rounded-lg overflow-hidden border dark:border-claude-darkBorder border-claude-border">
-              {/* Terminal header */}
-              <div className="flex items-center gap-1.5 px-3 py-1.5 dark:bg-claude-darkSurface bg-claude-surfaceInset">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
-                <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                <span className="ml-2 text-[10px] dark:text-claude-darkTextSecondary text-claude-textSecondary font-medium">Terminal</span>
+                }`}>
+                {hasToolResultText
+                  ? (toolResultSummary ?? `${resultLineCount} ${resultLineCount === 1 ? 'line' : 'lines'} of output`)
+                  : toolResultFallback}
               </div>
-              {/* Terminal content */}
-              <div className="dark:bg-claude-darkSurfaceInset bg-claude-surfaceInset px-3 py-3 max-h-72 overflow-y-auto font-mono text-xs">
-                {toolInputDisplay && (
-                  <div className="dark:text-claude-darkText text-claude-text">
-                    <span className="text-claude-accent select-none">$ </span>
-                    <span className="whitespace-pre-wrap break-words">{toolInputDisplay}</span>
-                  </div>
-                )}
-                {toolResult && (hasToolResultText || showNoDetailError) && (
-                  <div className={`mt-1.5 whitespace-pre-wrap break-words ${
-                    isToolError
+            )}
+            {!toolResult && (
+              <div className="text-xs dark:text-claude-darkTextSecondary/60 text-claude-textSecondary/60 mt-0.5">
+                {i18nService.t('coworkToolRunning')}
+              </div>
+            )}
+          </div>
+        </button>
+        {isExpanded && (
+          <div className="ml-4 mt-2">
+            {isBashTool ? (
+              // Terminal-style display for Bash commands
+              <div className="rounded-lg overflow-hidden border dark:border-claude-darkBorder border-claude-border">
+                {/* Terminal header */}
+                <div className="flex items-center gap-1.5 px-3 py-1.5 dark:bg-claude-darkSurface bg-claude-surfaceInset">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                  <span className="ml-2 text-[10px] dark:text-claude-darkTextSecondary text-claude-textSecondary font-medium">Terminal</span>
+                </div>
+                {/* Terminal content */}
+                <div className="dark:bg-claude-darkSurfaceInset bg-claude-surfaceInset px-3 py-3 max-h-72 overflow-y-auto font-mono text-xs">
+                  {toolInputDisplay && (
+                    <div className="dark:text-claude-darkText text-claude-text">
+                      <span className="text-claude-accent select-none">$ </span>
+                      <span className="whitespace-pre-wrap break-words">{toolInputDisplay}</span>
+                    </div>
+                  )}
+                  {toolResult && (hasToolResultText || showNoDetailError) && (
+                    <div className={`mt-1.5 whitespace-pre-wrap break-words ${isToolError
                       ? 'text-red-400'
                       : hasToolResultText
                         ? 'dark:text-claude-darkTextSecondary text-claude-textSecondary'
                         : 'dark:text-claude-darkTextSecondary/70 text-claude-textSecondary/70 italic'
-                  }`}>
-                    {displayToolResult}
-                  </div>
-                )}
-                {!toolResult && (
-                  <div className="dark:text-claude-darkTextSecondary/60 text-claude-textSecondary/60 mt-1.5 italic">
-                    {i18nService.t('coworkToolRunning')}
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : isTodoWriteTool && todoItems ? (
-            <TodoWriteInputView items={todoItems} />
-          ) : (
-            // Standard display for other tools with input/output labels
-            <div className="space-y-2">
-              {toolInputDisplay && (
-                <div>
-                  <div className="text-[10px] font-medium dark:text-claude-darkTextSecondary/70 text-claude-textSecondary/70 uppercase tracking-wider mb-1">
-                    {i18nService.t('coworkToolInput')}
-                  </div>
-                  <div className="max-h-48 overflow-y-auto">
-                    <pre className="text-xs dark:text-claude-darkText text-claude-text whitespace-pre-wrap break-words font-mono">
-                      {toolInputDisplay}
-                    </pre>
-                  </div>
+                      }`}>
+                      {displayToolResult}
+                    </div>
+                  )}
+                  {!toolResult && (
+                    <div className="dark:text-claude-darkTextSecondary/60 text-claude-textSecondary/60 mt-1.5 italic">
+                      {i18nService.t('coworkToolRunning')}
+                    </div>
+                  )}
                 </div>
-              )}
-              {toolResult && (hasToolResultText || showNoDetailError) && (
-                <div>
-                  <div className="text-[10px] font-medium dark:text-claude-darkTextSecondary/70 text-claude-textSecondary/70 uppercase tracking-wider mb-1">
-                    {i18nService.t('coworkToolResult')}
+              </div>
+            ) : isTodoWriteTool && todoItems ? (
+              <TodoWriteInputView items={todoItems} />
+            ) : (
+              // Standard display for other tools with input/output labels
+              <div className="space-y-2">
+                {toolInputDisplay && (
+                  <div>
+                    <div className="text-[10px] font-medium dark:text-claude-darkTextSecondary/70 text-claude-textSecondary/70 uppercase tracking-wider mb-1">
+                      {i18nService.t('coworkToolInput')}
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      <pre className="text-xs dark:text-claude-darkText text-claude-text whitespace-pre-wrap break-words font-mono">
+                        {toolInputDisplay}
+                      </pre>
+                    </div>
                   </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    <pre className={`text-xs whitespace-pre-wrap break-words font-mono ${
-                      isToolError
+                )}
+                {toolResult && (hasToolResultText || showNoDetailError) && (
+                  <div>
+                    <div className="text-[10px] font-medium dark:text-claude-darkTextSecondary/70 text-claude-textSecondary/70 uppercase tracking-wider mb-1">
+                      {i18nService.t('coworkToolResult')}
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      <pre className={`text-xs whitespace-pre-wrap break-words font-mono ${isToolError
                         ? 'text-red-500'
                         : hasToolResultText
                           ? 'dark:text-claude-darkText text-claude-text'
                           : 'dark:text-claude-darkTextSecondary text-claude-textSecondary italic'
-                    }`}>
-                      {displayToolResult}
-                    </pre>
+                        }`}>
+                        {displayToolResult}
+                      </pre>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
 // Copy button component
 const CopyButton: React.FC<{
@@ -849,9 +845,8 @@ const CopyButton: React.FC<{
   return (
     <button
       onClick={handleCopy}
-      className={`p-1.5 rounded-md dark:hover:bg-claude-darkSurfaceHover hover:bg-claude-surfaceHover transition-all duration-200 ${
-        visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      }`}
+      className={`p-1.5 rounded-md dark:hover:bg-claude-darkSurfaceHover hover:bg-claude-surfaceHover transition-all duration-200 ${visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
       title={i18nService.t('copyToClipboard')}
     >
       {copied ? (
@@ -892,7 +887,53 @@ const CopyButton: React.FC<{
   );
 };
 
-export const UserMessageItem: React.FC<{ message: CoworkMessage; skills: Skill[] }> = React.memo(({ message, skills }) => {
+// Delete button component
+const DeleteButton: React.FC<{
+  visible: boolean;
+  onDelete: (e: React.MouseEvent) => void;
+}> = ({ visible, onDelete }) => {
+  return (
+    <button
+      onClick={onDelete}
+      className={`p-1.5 rounded-md dark:hover:bg-red-500/20 hover:bg-red-100 transition-all duration-200 ${visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      title={i18nService.t('deleteMessage')}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="w-4 h-4 text-red-500"
+        aria-hidden="true"
+      >
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+    </button>
+  );
+};
+
+export const UserMessageItem: React.FC<{
+  message: CoworkMessage;
+  skills: Skill[];
+  isMultiSelectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (messageId: string) => void;
+  onDelete?: (messageId: string) => void;
+}> = React.memo(({
+  message,
+  skills,
+  isMultiSelectMode = false,
+  isSelected = false,
+  onToggleSelect,
+  onDelete,
+}) => {
   const [isHovered, setIsHovered] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
@@ -905,43 +946,72 @@ export const UserMessageItem: React.FC<{ message: CoworkMessage; skills: Skill[]
   // Get image attachments from metadata
   const imageAttachments = ((message.metadata as CoworkMessageMetadata)?.imageAttachments ?? []) as CoworkImageAttachment[];
 
+  const handleClick = () => {
+    if (isMultiSelectMode && onToggleSelect) {
+      onToggleSelect(message.id);
+    }
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(message.id);
+    }
+  };
+
   return (
     <div
-      className="py-2 px-4"
+      className={`py-2 px-4 ${isMultiSelectMode && isSelected ? 'dark:bg-claude-accent/15 bg-claude-accent/10' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={handleClick}
     >
       <div className="max-w-3xl mx-auto">
-        <div className="pl-4 sm:pl-8 md:pl-12">
-          <div className="flex items-start gap-3 flex-row-reverse">
-            <div className="w-full min-w-0 flex flex-col items-end">
-              <div className="w-fit max-w-[42rem] rounded-2xl px-4 py-2.5 dark:bg-claude-darkSurface bg-claude-surface dark:text-claude-darkText text-claude-text shadow-subtle">
-                {message.content?.trim() && (
-                  <MarkdownContent
-                    content={message.content}
-                    className="max-w-none whitespace-pre-wrap break-words"
-                  />
-                )}
-                {imageAttachments.length > 0 && (
-                  <div className={`flex flex-wrap gap-2 ${message.content?.trim() ? 'mt-2' : ''}`}>
-                    {imageAttachments.map((img, idx) => (
-                      <div key={idx} className="relative group">
-                        <img
-                          src={`data:${img.mimeType};base64,${img.base64Data}`}
-                          alt={img.name}
-                          className="max-h-48 max-w-[16rem] rounded-lg object-contain cursor-pointer border dark:border-claude-darkBorder/50 border-claude-border/50 hover:border-claude-accent/50 transition-colors"
-                          title={img.name}
-                          onClick={() => setExpandedImage(`data:${img.mimeType};base64,${img.base64Data}`)}
-                        />
-                        <div className="absolute bottom-1 left-1 right-1 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/50 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-opacity truncate pointer-events-none">
-                          <PhotoIcon className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{img.name}</span>
-                        </div>
+        {/* Row: checkbox on left, bubble on right */}
+        <div className="flex items-start gap-3">
+          {/* Checkbox at far left */}
+          {isMultiSelectMode && (
+            <div
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-2 transition-colors ${isSelected ? 'bg-claude-accent border-claude-accent' : 'border-[var(--icon-secondary)]'
+                }`}
+            >
+              {isSelected && (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" className="w-3 h-3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              )}
+            </div>
+          )}
+          {/* Right side: bubble + buttons stacked */}
+          <div className="flex-1 min-w-0 flex flex-col items-end">
+            <div className="w-fit max-w-[42rem] rounded-2xl px-4 py-2.5 dark:bg-claude-darkSurface bg-claude-surface dark:text-claude-darkText text-claude-text shadow-subtle">
+              {message.content?.trim() && (
+                <MarkdownContent
+                  content={message.content}
+                  className="max-w-none whitespace-pre-wrap break-words"
+                />
+              )}
+              {imageAttachments.length > 0 && (
+                <div className={`flex flex-wrap gap-2 ${message.content?.trim() ? 'mt-2' : ''}`}>
+                  {imageAttachments.map((img, idx) => (
+                    <div key={idx} className="relative group">
+                      <img
+                        src={`data:${img.mimeType};base64,${img.base64Data}`}
+                        alt={img.name}
+                        className="max-h-48 max-w-[16rem] rounded-lg object-contain cursor-pointer border dark:border-claude-darkBorder/50 border-claude-border/50 hover:border-claude-accent/50 transition-colors"
+                        title={img.name}
+                        onClick={() => setExpandedImage(`data:${img.mimeType};base64,${img.base64Data}`)}
+                      />
+                      <div className="absolute bottom-1 left-1 right-1 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/50 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-opacity truncate pointer-events-none">
+                        <PhotoIcon className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{img.name}</span>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {!isMultiSelectMode && (
               <div className="flex items-center justify-end gap-1.5 mt-1">
                 {messageSkills.map(skill => (
                   <div
@@ -955,16 +1025,13 @@ export const UserMessageItem: React.FC<{ message: CoworkMessage; skills: Skill[]
                     </span>
                   </div>
                 ))}
-                <CopyButton
-                  content={message.content}
-                  visible={isHovered}
-                />
+                <CopyButton content={message.content} visible={isHovered} />
+                <DeleteButton visible={isHovered} onDelete={handleDelete} />
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
-      {/* Image lightbox overlay */}
       {expandedImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 cursor-pointer"
@@ -987,39 +1054,48 @@ const AssistantMessageItem: React.FC<{
   resolveLocalFilePath?: (href: string, text: string) => string | null;
   mapDisplayText?: (value: string) => string;
   showCopyButton?: boolean;
+  isMultiSelectMode?: boolean;
+  onDelete?: (messageId: string) => void;
 }> = ({
   message,
   resolveLocalFilePath,
   mapDisplayText,
   showCopyButton = false,
+  isMultiSelectMode = false,
+  onDelete,
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const displayContent = mapDisplayText ? mapDisplayText(message.content) : message.content;
+    const [isHovered, setIsHovered] = useState(false);
+    const displayContent = mapDisplayText ? mapDisplayText(message.content) : message.content;
 
-  return (
-    <div
-      className="relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className="dark:text-claude-darkText text-claude-text">
-        <MarkdownContent
-          content={displayContent}
-          className="prose dark:prose-invert max-w-none"
-          resolveLocalFilePath={resolveLocalFilePath}
-        />
-      </div>
-      {showCopyButton && (
-        <div className="flex items-center gap-1.5 mt-1">
-          <CopyButton
+    const handleDelete = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onDelete) {
+        onDelete(message.id);
+      }
+    };
+
+    return (
+      <div
+        className="relative"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div className="dark:text-claude-darkText text-claude-text">
+          <MarkdownContent
             content={displayContent}
-            visible={isHovered}
+            className="prose dark:prose-invert max-w-none"
+            resolveLocalFilePath={resolveLocalFilePath}
           />
         </div>
-      )}
-    </div>
-  );
-};
+        {(showCopyButton || onDelete) && !isMultiSelectMode && (
+          <div className="flex items-center gap-1.5 mt-1">
+            {showCopyButton && <CopyButton content={displayContent} visible={isHovered} />}
+            {onDelete && <DeleteButton visible={isHovered} onDelete={handleDelete} />}
+          </div>
+        )}
+      </div>
+    );
+  };
 
 // Streaming activity bar shown between messages and input
 const StreamingActivityBar: React.FC<{ messages: CoworkMessage[] }> = ({ messages }) => {
@@ -1096,9 +1172,8 @@ const ThinkingBlock: React.FC<{
         className="w-full flex items-center gap-2 px-3 py-2 text-left dark:hover:bg-claude-darkSurfaceHover/50 hover:bg-claude-surfaceHover/50 transition-colors"
       >
         <ChevronRightIcon
-          className={`h-3.5 w-3.5 dark:text-claude-darkTextSecondary text-claude-textSecondary flex-shrink-0 transition-transform duration-200 ${
-            isExpanded ? 'rotate-90' : ''
-          }`}
+          className={`h-3.5 w-3.5 dark:text-claude-darkTextSecondary text-claude-textSecondary flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''
+            }`}
         />
         <span className="text-xs font-medium dark:text-claude-darkTextSecondary text-claude-textSecondary">
           {i18nService.t('reasoning')}
@@ -1124,157 +1199,195 @@ export const AssistantTurnBlock: React.FC<{
   mapDisplayText?: (value: string) => string;
   showTypingIndicator?: boolean;
   showCopyButtons?: boolean;
+  isMultiSelectMode?: boolean;
+  selectedMessageIds?: Set<string>;
+  onToggleSelect?: (messageId: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
 }> = ({
   turn,
   resolveLocalFilePath,
   mapDisplayText,
   showTypingIndicator = false,
   showCopyButtons = true,
+  isMultiSelectMode = false,
+  selectedMessageIds = new Set(),
+  onToggleSelect,
+  onDeleteMessage,
 }) => {
-  const visibleAssistantItems = getVisibleAssistantItems(turn.assistantItems);
+    const visibleAssistantItems = getVisibleAssistantItems(turn.assistantItems);
 
-  const renderSystemMessage = (message: CoworkMessage) => {
-    const rawContent = hasText(message.content)
-      ? message.content
-      : (typeof message.metadata?.error === 'string' ? message.metadata.error : '');
-    const normalizedContent = getScheduledReminderDisplayText(rawContent) ?? rawContent;
-    const content = mapDisplayText ? mapDisplayText(normalizedContent) : normalizedContent;
-    if (!content.trim()) return null;
+    const renderSystemMessage = (message: CoworkMessage) => {
+      const rawContent = hasText(message.content)
+        ? message.content
+        : (typeof message.metadata?.error === 'string' ? message.metadata.error : '');
+      const normalizedContent = getScheduledReminderDisplayText(rawContent) ?? rawContent;
+      const content = mapDisplayText ? mapDisplayText(normalizedContent) : normalizedContent;
+      if (!content.trim()) return null;
 
-    return (
-      <div className="rounded-lg border dark:border-claude-darkBorder/70 border-claude-border/70 dark:bg-claude-darkBg/40 bg-claude-bg/60 px-3 py-2">
-        <div className="flex items-start gap-2">
-          <InformationCircleIcon className="h-4 w-4 mt-0.5 dark:text-claude-darkTextSecondary text-claude-textSecondary flex-shrink-0" />
-          <div className="text-xs whitespace-pre-wrap dark:text-claude-darkTextSecondary text-claude-textSecondary">
-            {content}
+      return (
+        <div className="rounded-lg border dark:border-claude-darkBorder/70 border-claude-border/70 dark:bg-claude-darkBg/40 bg-claude-bg/60 px-3 py-2">
+          <div className="flex items-start gap-2">
+            <InformationCircleIcon className="h-4 w-4 mt-0.5 dark:text-claude-darkTextSecondary text-claude-textSecondary flex-shrink-0" />
+            <div className="text-xs whitespace-pre-wrap dark:text-claude-darkTextSecondary text-claude-textSecondary">
+              {content}
+            </div>
           </div>
         </div>
-      </div>
-    );
-  };
+      );
+    };
 
-  const renderOrphanToolResult = (message: CoworkMessage) => {
-    const toolResultDisplayRaw = getToolResultDisplay(message);
-    const toolResultDisplay = mapDisplayText ? mapDisplayText(toolResultDisplayRaw) : toolResultDisplayRaw;
-    const isToolError = Boolean(message.metadata?.isError || message.metadata?.error);
-    const hasToolResultText = hasText(toolResultDisplay);
-    const resultLineCount = hasToolResultText ? getToolResultLineCount(toolResultDisplay) : 0;
-    const showNoDetailError = isToolError && !hasToolResultText;
-    const fallbackText = showNoDetailError ? i18nService.t('coworkToolNoErrorDetail') : '';
-    const displayText = hasToolResultText ? toolResultDisplay : fallbackText;
-    return (
-      <div className="py-1">
-        <div className="flex items-start gap-2">
-          <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${
-            isToolError ? 'bg-red-500' : 'bg-claude-darkTextSecondary/50'
-          }`} />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium dark:text-claude-darkTextSecondary text-claude-textSecondary">
-              {i18nService.t('coworkToolResult')}
-            </div>
-            {resultLineCount > 0 && (
-              <div className="text-xs dark:text-claude-darkTextSecondary/60 text-claude-textSecondary/60 mt-0.5">
-                {resultLineCount} {resultLineCount === 1 ? 'line' : 'lines'} of output
+    const renderOrphanToolResult = (message: CoworkMessage) => {
+      const toolResultDisplayRaw = getToolResultDisplay(message);
+      const toolResultDisplay = mapDisplayText ? mapDisplayText(toolResultDisplayRaw) : toolResultDisplayRaw;
+      const isToolError = Boolean(message.metadata?.isError || message.metadata?.error);
+      const hasToolResultText = hasText(toolResultDisplay);
+      const resultLineCount = hasToolResultText ? getToolResultLineCount(toolResultDisplay) : 0;
+      const showNoDetailError = isToolError && !hasToolResultText;
+      const fallbackText = showNoDetailError ? i18nService.t('coworkToolNoErrorDetail') : '';
+      const displayText = hasToolResultText ? toolResultDisplay : fallbackText;
+      return (
+        <div className="py-1">
+          <div className="flex items-start gap-2">
+            <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${isToolError ? 'bg-red-500' : 'bg-claude-darkTextSecondary/50'
+              }`} />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium dark:text-claude-darkTextSecondary text-claude-textSecondary">
+                {i18nService.t('coworkToolResult')}
               </div>
-            )}
-            {resultLineCount === 0 && showNoDetailError && (
-              <div className={`text-xs mt-0.5 ${
-                isToolError
+              {resultLineCount > 0 && (
+                <div className="text-xs dark:text-claude-darkTextSecondary/60 text-claude-textSecondary/60 mt-0.5">
+                  {resultLineCount} {resultLineCount === 1 ? 'line' : 'lines'} of output
+                </div>
+              )}
+              {resultLineCount === 0 && showNoDetailError && (
+                <div className={`text-xs mt-0.5 ${isToolError
                   ? 'text-red-500/80'
                   : 'dark:text-claude-darkTextSecondary/60 text-claude-textSecondary/60'
-              }`}>
-                {fallbackText}
-              </div>
-            )}
-            {(hasToolResultText || showNoDetailError) && (
-              <div className="mt-2 px-3 py-2 rounded-lg dark:bg-claude-darkSurface/50 bg-claude-surface/50 max-h-64 overflow-y-auto">
-                <pre className={`text-xs whitespace-pre-wrap break-words font-mono ${
-                  isToolError
+                  }`}>
+                  {fallbackText}
+                </div>
+              )}
+              {(hasToolResultText || showNoDetailError) && (
+                <div className="mt-2 px-3 py-2 rounded-lg dark:bg-claude-darkSurface/50 bg-claude-surface/50 max-h-64 overflow-y-auto">
+                  <pre className={`text-xs whitespace-pre-wrap break-words font-mono ${isToolError
                     ? 'text-red-500'
                     : hasToolResultText
                       ? 'dark:text-claude-darkText text-claude-text'
                       : 'dark:text-claude-darkTextSecondary text-claude-textSecondary italic'
-                }`}>
-                  {displayText}
-                </pre>
+                    }`}>
+                    {displayText}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // Check if any assistant message in this turn is selected
+    // Note: selectedMessageIds only contains user + assistant IDs for display purposes
+    const hasSelectedAssistantMessage = isMultiSelectMode && visibleAssistantItems.some((item) => {
+      if (item.type === 'assistant') {
+        return selectedMessageIds.has(item.message.id);
+      }
+      return false;
+    });
+
+    return (
+      <div className={`px-4 py-2 ${hasSelectedAssistantMessage ? 'dark:bg-claude-accent/15 bg-claude-accent/10' : ''}`}>
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-start gap-3">
+            {/* Checkbox for multi-select mode */}
+            {isMultiSelectMode && visibleAssistantItems.some(item => item.type === 'assistant') && (
+              <div className="flex flex-col gap-3 py-3">
+                {visibleAssistantItems.map((item) => {
+                  if (item.type !== 'assistant') return null;
+                  const isSelected = selectedMessageIds.has(item.message.id);
+                  return (
+                    <div
+                      key={item.message.id}
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? 'bg-claude-accent border-claude-accent' : 'border-[var(--icon-secondary)]'}`}
+                      onClick={() => onToggleSelect?.(item.message.id)}
+                    >
+                      {isSelected && (
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" className="w-3 h-3">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
+            <div className="flex-1 min-w-0 px-4 py-3 space-y-3">
+              {visibleAssistantItems.map((item, index) => {
+                if (item.type === 'assistant') {
+                  if (item.message.metadata?.isThinking) {
+                    return (
+                      <ThinkingBlock
+                        key={item.message.id}
+                        message={item.message}
+                        mapDisplayText={mapDisplayText}
+                      />
+                    );
+                  }
+                  // Check if there are any tool_group items after this assistant message
+                  const hasToolGroupAfter = visibleAssistantItems
+                    .slice(index + 1)
+                    .some(laterItem => laterItem.type === 'tool_group');
+
+                  return (
+                    <AssistantMessageItem
+                      key={item.message.id}
+                      message={item.message}
+                      resolveLocalFilePath={resolveLocalFilePath}
+                      mapDisplayText={mapDisplayText}
+                      showCopyButton={showCopyButtons && !hasToolGroupAfter}
+                      isMultiSelectMode={isMultiSelectMode}
+                      onDelete={onDeleteMessage}
+                    />
+                  );
+                }
+
+                if (item.type === 'tool_group') {
+                  const nextItem = visibleAssistantItems[index + 1];
+                  const isLastInSequence = !nextItem || nextItem.type !== 'tool_group';
+                  return (
+                    <ToolCallGroup
+                      key={`tool-${item.group.toolUse.id}`}
+                      group={item.group}
+                      isLastInSequence={isLastInSequence}
+                      mapDisplayText={mapDisplayText}
+                    />
+                  );
+                }
+
+                if (item.type === 'system') {
+                  const systemMessage = renderSystemMessage(item.message);
+                  if (!systemMessage) {
+                    return null;
+                  }
+                  return (
+                    <div key={item.message.id}>
+                      {systemMessage}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={item.message.id}>
+                    {renderOrphanToolResult(item.message)}
+                  </div>
+                );
+              })}
+              {showTypingIndicator && <TypingDots />}
+            </div>
           </div>
         </div>
       </div>
     );
   };
-
-  return (
-    <div className="px-4 py-2">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-start gap-3">
-          <div className="flex-1 min-w-0 px-4 py-3 space-y-3">
-            {visibleAssistantItems.map((item, index) => {
-              if (item.type === 'assistant') {
-                if (item.message.metadata?.isThinking) {
-                  return (
-                    <ThinkingBlock
-                      key={item.message.id}
-                      message={item.message}
-                      mapDisplayText={mapDisplayText}
-                    />
-                  );
-                }
-                // Check if there are any tool_group items after this assistant message
-                const hasToolGroupAfter = visibleAssistantItems
-                  .slice(index + 1)
-                  .some(laterItem => laterItem.type === 'tool_group');
-
-                return (
-                  <AssistantMessageItem
-                    key={item.message.id}
-                    message={item.message}
-                    resolveLocalFilePath={resolveLocalFilePath}
-                    mapDisplayText={mapDisplayText}
-                    showCopyButton={showCopyButtons && !hasToolGroupAfter}
-                  />
-                );
-              }
-
-              if (item.type === 'tool_group') {
-                const nextItem = visibleAssistantItems[index + 1];
-                const isLastInSequence = !nextItem || nextItem.type !== 'tool_group';
-                return (
-                  <ToolCallGroup
-                    key={`tool-${item.group.toolUse.id}`}
-                    group={item.group}
-                    isLastInSequence={isLastInSequence}
-                    mapDisplayText={mapDisplayText}
-                  />
-                );
-              }
-
-              if (item.type === 'system') {
-                const systemMessage = renderSystemMessage(item.message);
-                if (!systemMessage) {
-                  return null;
-                }
-                return (
-                  <div key={item.message.id}>
-                    {systemMessage}
-                  </div>
-                );
-              }
-
-              return (
-                <div key={item.message.id}>
-                  {renderOrphanToolResult(item.message)}
-                </div>
-              );
-            })}
-            {showTypingIndicator && <TypingDots />}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const CoworkSessionDetail: React.FC<CoworkSessionDetailProps> = ({
   onManageSkills,
@@ -1320,6 +1433,12 @@ const CoworkSessionDetail: React.FC<CoworkSessionDetailProps> = ({
   const renameInputRef = useRef<HTMLInputElement>(null);
   const ignoreNextBlurRef = useRef(false);
 
+  // Multi-select states
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
+  const [pendingDeleteMessageIds, setPendingDeleteMessageIds] = useState<string[]>([]);
+  const [showDeleteMessageConfirm, setShowDeleteMessageConfirm] = useState(false);
+
   // Reset rename value when session changes
   useEffect(() => {
     if (!isRenaming && currentSession) {
@@ -1330,6 +1449,12 @@ const CoworkSessionDetail: React.FC<CoworkSessionDetailProps> = ({
 
   useEffect(() => {
     setShouldAutoScroll(true);
+  }, [currentSession?.id]);
+
+  // Reset multi-select when session changes
+  useEffect(() => {
+    setIsMultiSelectMode(false);
+    setSelectedMessageIds(new Set());
   }, [currentSession?.id]);
 
   // Focus rename input when entering rename mode
@@ -1662,6 +1787,32 @@ const CoworkSessionDetail: React.FC<CoworkSessionDetailProps> = ({
     setShowConfirmDelete(false);
   };
 
+  const handleCancelMultiSelect = () => {
+    setIsMultiSelectMode(false);
+    setSelectedMessageIds(new Set());
+  };
+
+  const handleBatchDeleteClick = () => {
+    if (selectedMessageIds.size === 0) return;
+    setPendingDeleteMessageIds(Array.from(selectedMessageIds));
+    setShowDeleteMessageConfirm(true);
+  };
+
+  const handleConfirmDeleteMessages = async () => {
+    if (!currentSession || pendingDeleteMessageIds.length === 0) return;
+
+    const allIdsToDelete = expandMessageIdsForDeletion(pendingDeleteMessageIds, turns);
+    await coworkService.deleteMessages(currentSession.id, allIdsToDelete);
+    setShowDeleteMessageConfirm(false);
+    setPendingDeleteMessageIds([]);
+    handleCancelMultiSelect();
+  };
+
+  const handleCancelDeleteMessage = () => {
+    setShowDeleteMessageConfirm(false);
+    setPendingDeleteMessageIds([]);
+  };
+
   const handleMessagesScroll = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -1779,6 +1930,89 @@ const CoworkSessionDetail: React.FC<CoworkSessionDetailProps> = ({
   const displayItems = useMemo(() => messages ? buildDisplayItems(messages) : [], [messages]);
   const turns = useMemo(() => buildConversationTurns(displayItems), [displayItems]);
 
+  // Helper function to collect visible message IDs (user + assistant only)
+  // Used for UI selection display
+  const collectVisibleMessageIds = useCallback((turn: ConversationTurn): string[] => {
+    return turn.assistantItems
+      .filter(item => item.type === 'assistant')
+      .map(item => item.message.id);
+  }, []);
+
+  // Multi-select handlers (must be after turns definition)
+  const handleToggleSelect = useCallback((messageId: string) => {
+    // Find if this is a user message and collect related IDs
+    let isUserMessage = false;
+    let pairedVisibleIds: string[] = [];
+    for (const turn of turns) {
+      if (turn.userMessage?.id === messageId) {
+        isUserMessage = true;
+        // Collect visible message IDs for UI display (user + assistant only)
+        pairedVisibleIds = collectVisibleMessageIds(turn);
+        break;
+      }
+    }
+
+    if (!isMultiSelectMode) {
+      // First selection - enter multi-select mode
+      const initialIds = new Set([messageId]);
+      // If selecting a user message, also select paired messages
+      if (isUserMessage) {
+        pairedVisibleIds.forEach(id => initialIds.add(id));
+      }
+      setIsMultiSelectMode(true);
+      setSelectedMessageIds(initialIds);
+    } else {
+      // Compute next state directly to avoid calling setState inside a state updater (React anti-pattern)
+      const next = new Set(selectedMessageIds);
+      const wasSelected = selectedMessageIds.has(messageId);
+
+      if (wasSelected) {
+        // Unselecting - just remove this message (no cascade)
+        next.delete(messageId);
+      } else {
+        // Selecting - add this message
+        next.add(messageId);
+        // If selecting a user message, also select paired messages
+        if (isUserMessage) {
+          pairedVisibleIds.forEach(id => next.add(id));
+        }
+      }
+      setSelectedMessageIds(next);
+      if (next.size === 0) {
+        setIsMultiSelectMode(false);
+      }
+    }
+  }, [isMultiSelectMode, selectedMessageIds, turns, collectVisibleMessageIds]);
+
+  // Click delete button → enter multi-select with paired messages pre-selected
+  const handleDeleteMessage = useCallback((messageId: string) => {
+    const pairedVisibleIds: string[] = [messageId];
+    let found = false;
+    for (const turn of turns) {
+      if (found) break;
+      if (turn.userMessage?.id === messageId) {
+        // Collect visible message IDs for UI display
+        pairedVisibleIds.push(...collectVisibleMessageIds(turn));
+        found = true;
+        break;
+      }
+      // Check if clicking delete on an assistant message
+      for (const item of turn.assistantItems) {
+        if (item.type === 'assistant' && item.message.id === messageId) {
+          if (turn.userMessage) {
+            pairedVisibleIds.push(turn.userMessage.id);
+          }
+          // Collect visible message IDs for UI display
+          pairedVisibleIds.push(...collectVisibleMessageIds(turn));
+          found = true;
+          break;
+        }
+      }
+    }
+    setIsMultiSelectMode(true);
+    setSelectedMessageIds(new Set(pairedVisibleIds));
+  }, [turns, collectVisibleMessageIds]);
+
   // Cache turn DOM elements when turns change
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -1840,7 +2074,14 @@ const CoworkSessionDetail: React.FC<CoworkSessionDetailProps> = ({
         <div key={turn.id} data-turn-index={index}>
           {turn.userMessage && (
             <div data-export-role="user-message">
-              <UserMessageItem message={turn.userMessage} skills={skills} />
+              <UserMessageItem
+                message={turn.userMessage}
+                skills={skills}
+                isMultiSelectMode={isMultiSelectMode}
+                isSelected={selectedMessageIds.has(turn.userMessage.id)}
+                onToggleSelect={handleToggleSelect}
+                onDelete={!isStreaming ? handleDeleteMessage : undefined}
+              />
             </div>
           )}
           {showAssistantBlock && (
@@ -1851,6 +2092,10 @@ const CoworkSessionDetail: React.FC<CoworkSessionDetailProps> = ({
                 mapDisplayText={mapDisplayText}
                 showTypingIndicator={showTypingIndicator}
                 showCopyButtons={!isStreaming}
+                isMultiSelectMode={isMultiSelectMode}
+                selectedMessageIds={selectedMessageIds}
+                onToggleSelect={handleToggleSelect}
+                onDeleteMessage={!isStreaming ? handleDeleteMessage : undefined}
               />
             </div>
           )}
@@ -2030,6 +2275,47 @@ const CoworkSessionDetail: React.FC<CoworkSessionDetailProps> = ({
         </div>
       )}
 
+      {/* Delete Message Confirmation Modal */}
+      {showDeleteMessageConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
+          onClick={handleCancelDeleteMessage}
+        >
+          <div
+            className="w-full max-w-sm mx-4 dark:bg-claude-darkSurface bg-claude-surface rounded-2xl shadow-modal overflow-hidden modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 px-5 py-4">
+              <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/30">
+                <ExclamationTriangleIcon className="h-5 w-5 text-red-600 dark:text-red-500" />
+              </div>
+              <h2 className="text-base font-semibold dark:text-claude-darkText text-claude-text">
+                {i18nService.t('deleteMessagesConfirmTitle')}
+              </h2>
+            </div>
+            <div className="px-5 pb-4">
+              <p className="text-sm dark:text-claude-darkTextSecondary text-claude-textSecondary">
+                {i18nService.t('deleteMessagesConfirmMessage').replace('{count}', String(pendingDeleteMessageIds.length))}
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-3 px-5 py-4 border-t dark:border-claude-darkBorder border-claude-border">
+              <button
+                onClick={handleCancelDeleteMessage}
+                className="px-4 py-2 text-sm font-medium rounded-lg dark:text-claude-darkTextSecondary text-claude-textSecondary dark:hover:bg-claude-darkSurfaceHover hover:bg-claude-surfaceHover transition-colors"
+              >
+                {i18nService.t('cancel')}
+              </button>
+              <button
+                onClick={handleConfirmDeleteMessages}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
+              >
+                {i18nService.t('batchDelete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="relative flex-1 min-h-0">
         <div
@@ -2040,6 +2326,29 @@ const CoworkSessionDetail: React.FC<CoworkSessionDetailProps> = ({
           {renderConversationTurns()}
           <div className="h-20" />
         </div>
+
+        {/* Multi-Select Floating Bar */}
+        {isMultiSelectMode && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 px-4 py-3 rounded-2xl dark:bg-claude-darkSurface bg-claude-surface shadow-popover border dark:border-claude-darkBorder border-claude-border z-20">
+            <span className="text-sm font-medium dark:text-claude-darkText text-claude-text">
+              {i18nService.t('selectedNMessages').replace('{count}', String(selectedMessageIds.size))}
+            </span>
+            <button
+              onClick={handleBatchDeleteClick}
+              disabled={selectedMessageIds.size === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <TrashIcon className="h-4 w-4" />
+              {i18nService.t('batchDelete')}
+            </button>
+            <button
+              onClick={handleCancelMultiSelect}
+              className="px-3 py-1.5 text-sm font-medium rounded-lg dark:text-claude-darkTextSecondary text-claude-textSecondary dark:hover:bg-claude-darkSurfaceHover hover:bg-claude-surfaceHover transition-colors"
+            >
+              {i18nService.t('cancel')}
+            </button>
+          </div>
+        )}
 
         {/* Turn Navigation Buttons */}
         {turns.length > 1 && isScrollable && (
