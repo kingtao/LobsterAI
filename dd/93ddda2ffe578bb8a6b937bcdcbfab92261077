@@ -1,0 +1,37 @@
+src/main/main.ts
+  fb882b7ed0ae73e4 1021-1033,1577-1616,1619-1626,1805-2064,2564-2581,4259-4304,4392-4408
+src/renderer/types/electron.d.ts
+  fb882b7ed0ae73e4 318-319
+src/main/coworkStore.ts
+  fb882b7ed0ae73e4 872-886
+src/renderer/components/cowork/CoworkSessionDetail.tsx
+  fb882b7ed0ae73e4 890-897,900-921,924-928,931-935,949-961,967,971-974,977-980,982,985,988-1007,1009,1011,1014,1057-1058,1064-1065,1067-1068,1071-1080,1084,1086,1096-1098,1202-1205,1212-1215,1436-1441,1454-1459,1790-1802,1806-1815,2080-2082,2095-2097,2278-2318,2330-2352
+src/renderer/services/cowork.ts
+  fb882b7ed0ae73e4 9-10,368-395
+src/renderer/services/i18n.ts
+  fb882b7ed0ae73e4 462-465,1569-1572
+src/main/preload.ts
+  fb882b7ed0ae73e4 148-151
+src/renderer/store/slices/coworkSlice.ts
+  fb882b7ed0ae73e4 211-225,346-347
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "dd93ddda2ffe578bb8a6b937bcdcbfab92261077",
+  "prompts": {
+    "fb882b7ed0ae73e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6b726ca3-0f59-4900-9b16-d6c64e7f0c4c",
+        "model": "MiniMax-M2.7"
+      },
+      "human_author": "金涛 <jintao02@corp.netease.com>",
+      "messages": [],
+      "total_additions": 737,
+      "total_deletions": 114,
+      "accepted_lines": 699,
+      "overriden_lines": 0
+    }
+  }
+}
